@@ -1,0 +1,88 @@
+---
+title: "example_yosemite_temps_h"
+author: "Hamish"
+date: "20/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This data is every 5 seconds had to play around with the frequency when making the future periods.
+
+
+
+```{r}
+library(readr)
+library(prophet)
+library(tidyverse)
+df <- read_csv('~/prophet/examples/example_yosemite_temps.csv')
+glimpse(df)
+```
+Observations occur every 5 minutes
+
+```{r}
+model <- prophet(df)
+head(df)
+tail(df)
+12*24* 7 # for week # 12 by 5 mins to get hour by 24 to get day by 7 to get week = 2016
+dim(df) # is 18721 entries
+18721 /12 /24 # 18721 5 minute intervals is over 65 days of data
+
+```
+
+Construct dataframe for future periods in increments of 5 minutes for 2 days.
+288 x 5 minute periods in 1 day.
+2 x 288 x 5 minute periods in 2 days. 
+
+seq.int(from, to, by, length.out, along.with, ...)
+from is 2017-05-04 11:15:00 GMT
+to 
+> max(model$history.dates)
+[1] "2017-07-05 GMT"
+
+
+```{r}
+function (m, periods, freq = "day", include_history = TRUE) 
+{
+    if (freq == "m") {
+        freq <- "month"
+    }
+    if (is.null(m$history.dates)) {
+        stop("Model must be fit before this can be used.")
+    }
+    dates <- seq(max(m$history.dates), length.out = periods + 
+        1, by = freq)
+    dates <- dates[2:(periods + 1)]
+    if (include_history) {
+        dates <- c(m$history.dates, dates)
+        attr(dates, "tzone") <- "GMT"
+    }
+    return(data.frame(ds = dates))
+}
+```
+
+
+```{r}
+#3 
+future <- make_future_dataframe(model, periods = 2, freq = 576) # 288 x 5 minute periods in 1 day. forecast for 2 days = 2 x 288 = 576
+# future now has time steps of monthly data from Jan 1949 to December 1962.
+head(future)
+tail(future)
+```
+
+Create forecast
+```{r}
+forecast <- predict(model, future)
+head(forecast)
+tail(forecast)
+
+```
+
+```{r}
+plot(model, forecast)
+prophet_plot_components(model, forecast)
+dyplot.prophet(model, forecast)
+```
+
